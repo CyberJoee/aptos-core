@@ -8,7 +8,6 @@ use aptos_types::{
     account_address::AccountAddress,
     account_config::aptos_root_address,
     account_state::AccountState,
-    account_state_blob::{AccountStateBlob, AccountStateWithProof, AccountStatesChunkWithProof},
     contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
@@ -21,6 +20,12 @@ use aptos_types::{
         SparseMerkleRangeProof, TransactionAccumulatorSummary,
     },
     state_proof::StateProof,
+    state_store::{
+        state_store_key::StateStoreKey,
+        state_store_value::{
+            StateStoreValue, StateStoreValueChunkWithProof, StateStoreValueWithProof,
+        },
+    },
     transaction::{
         AccountTransactionsWithProof, TransactionInfo, TransactionListWithProof,
         TransactionOutputListWithProof, TransactionToCommit, TransactionWithProof, Version,
@@ -315,10 +320,7 @@ pub trait DbReader: Send + Sync {
     ///
     /// [`AptosDB::get_latest_account_state`]:
     /// ../aptosdb/struct.AptosDB.html#method.get_latest_account_state
-    fn get_latest_account_state(
-        &self,
-        address: AccountAddress,
-    ) -> Result<Option<AccountStateBlob>> {
+    fn get_latest_value(&self, state_store_key: StateStoreKey) -> Result<Option<StateStoreValue>> {
         unimplemented!()
     }
 
@@ -392,12 +394,12 @@ pub trait DbReader: Send + Sync {
 
     /// Returns the account state corresponding to the given version and account address with proof
     /// based on `ledger_version`
-    fn get_account_state_with_proof(
+    fn get_value_with_proof(
         &self,
-        address: AccountAddress,
+        state_store_key: StateStoreKey,
         version: Version,
         ledger_version: Version,
-    ) -> Result<AccountStateWithProof> {
+    ) -> Result<StateStoreValueWithProof> {
         unimplemented!()
     }
 
@@ -409,14 +411,11 @@ pub trait DbReader: Send + Sync {
     // ../aptosdb/struct.AptosDB.html#method.get_account_state_with_proof_by_version
     //
     // This is used by aptos core (executor) internally.
-    fn get_account_state_with_proof_by_version(
+    fn get_value_with_proof_by_version(
         &self,
-        address: AccountAddress,
+        state_store_key: StateStoreKey,
         version: Version,
-    ) -> Result<(
-        Option<AccountStateBlob>,
-        SparseMerkleProof<AccountStateBlob>,
-    )> {
+    ) -> Result<(Option<StateStoreValue>, SparseMerkleProof<StateStoreValue>)> {
         unimplemented!()
     }
 
@@ -482,18 +481,18 @@ pub trait DbReader: Send + Sync {
         )
     }
 
-    /// Returns total number of accounts at given version.
-    fn get_account_count(&self, version: Version) -> Result<usize> {
+    /// Returns total number of leaves in state store at given version.
+    fn get_state_store_leaf_count(&self, version: Version) -> Result<usize> {
         unimplemented!()
     }
 
-    /// Get a chunk of account data, addressed by the index of the account.
-    fn get_account_chunk_with_proof(
+    /// Get a chunk of state store value, addressed by the index.
+    fn get_value_chunk_with_proof(
         &self,
         version: Version,
         start_idx: usize,
         chunk_size: usize,
-    ) -> Result<AccountStatesChunkWithProof> {
+    ) -> Result<StateStoreValueChunkWithProof> {
         unimplemented!()
     }
 
@@ -513,10 +512,12 @@ impl MoveStorage for &dyn DbReader {
         access_path: AccessPath,
         version: Version,
     ) -> Result<Vec<u8>> {
-        let (account_state_blob, _) =
-            self.get_account_state_with_proof_by_version(access_path.address, version)?;
+        let (state_store_value, _) = self.get_value_with_proof_by_version(
+            StateStoreKey::AccountAddressKey(access_path.address),
+            version,
+        )?;
         let account_state =
-            AccountState::try_from(&account_state_blob.ok_or_else(|| {
+            AccountState::try_from(&state_store_value.ok_or_else(|| {
                 format_err!("missing blob in account state/account does not exist")
             })?)?;
 
@@ -529,7 +530,10 @@ impl MoveStorage for &dyn DbReader {
     fn fetch_config_by_version(&self, config_id: ConfigID, version: Version) -> Result<Vec<u8>> {
         let aptos_root_state = AccountState::try_from(
             &self
-                .get_account_state_with_proof_by_version(aptos_root_address(), version)?
+                .get_value_with_proof_by_version(
+                    StateStoreKey::AccountAddressKey(aptos_root_address()),
+                    version,
+                )?
                 .0
                 .ok_or_else(|| {
                     format_err!("missing blob in account state/account does not exist")
@@ -591,7 +595,7 @@ pub trait DbWriter: Send + Sync {
         &self,
         version: Version,
         expected_root_hash: HashValue,
-    ) -> Result<Box<dyn StateSnapshotReceiver<AccountStateBlob>>> {
+    ) -> Result<Box<dyn StateSnapshotReceiver<StateStoreValue>>> {
         unimplemented!()
     }
 }
@@ -631,24 +635,27 @@ impl DbReaderWriter {
 /// Network types for storage service
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum StorageRequest {
-    GetAccountStateWithProofByVersionRequest(Box<GetAccountStateWithProofByVersionRequest>),
+    GetValueWithProofByVersionRequest(Box<GetValueWithProofByVersionRequest>),
     GetStartupInfoRequest,
     SaveTransactionsRequest(Box<SaveTransactionsRequest>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
-pub struct GetAccountStateWithProofByVersionRequest {
-    /// The access path to query with.
-    pub address: AccountAddress,
+pub struct GetValueWithProofByVersionRequest {
+    /// The access key for the resource
+    pub state_store_key: StateStoreKey,
 
     /// The version the query is based on.
     pub version: Version,
 }
 
-impl GetAccountStateWithProofByVersionRequest {
+impl GetValueWithProofByVersionRequest {
     /// Constructor.
-    pub fn new(address: AccountAddress, version: Version) -> Self {
-        Self { address, version }
+    pub fn new(state_store_key: StateStoreKey, version: Version) -> Self {
+        Self {
+            state_store_key,
+            version,
+        }
     }
 }
 
