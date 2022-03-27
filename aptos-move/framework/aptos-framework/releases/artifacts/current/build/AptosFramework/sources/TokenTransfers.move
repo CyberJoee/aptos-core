@@ -1,6 +1,6 @@
 /// This module provides the foundation for transferring of Tokens
 module AptosFramework::TokenTransfers {
-    use Std::GUID::ID;
+    use Std::GUID::{Self, ID};
     use Std::Signer;
     use AptosFramework::Table::{Self, Table};
     use AptosFramework::Token::{Self, Token};
@@ -16,6 +16,17 @@ module AptosFramework::TokenTransfers {
                 pending_transfers: Table::create<address, Table<ID, Token<TokenType>>>(),
             }
         )
+    }
+
+    public(script) fun transfer_to_script<TokenType: copy + drop + store>(
+        sender: signer,
+        receiver: address,
+        creator: address,
+        token_creation_num: u64,
+        amount: u64,
+    ) acquires TokenTransfers {
+        let token_id = GUID::create_id(creator, token_creation_num);
+        transfer_to<TokenType>(&sender, receiver, &token_id, amount);
     }
 
     // Make an entry into pending transfers and extract from gallery
@@ -43,6 +54,16 @@ module AptosFramework::TokenTransfers {
         }
     }
 
+    public(script) fun receive_from_script<TokenType: copy + drop + store>(
+        receiver: signer,
+        sender: address,
+        creator: address,
+        token_creation_num: u64,
+    ) acquires TokenTransfers {
+        let token_id = GUID::create_id(creator, token_creation_num);
+        receive_from<TokenType>(&receiver, sender, &token_id);
+    }
+
     // Pull from someone else's pending transfers and insert into our gallery
     public fun receive_from<TokenType: copy + drop + store>(
         receiver: &signer,
@@ -54,7 +75,23 @@ module AptosFramework::TokenTransfers {
             &mut borrow_global_mut<TokenTransfers<TokenType>>(sender).pending_transfers;
         let pending_tokens = Table::borrow_mut(pending_transfers, &receiver_addr);
         let (_id, token) = Table::remove(pending_tokens, token_id);
+
+        if (Table::count(pending_tokens) == 0) {
+            let (_id, real_pending_transfers) = Table::remove(pending_transfers, &receiver_addr);
+            Table::destroy_empty(real_pending_transfers)
+        };
+
         Token::deposit_token(receiver, token)
+    }
+
+    public(script) fun stop_transfer_to_script<TokenType: copy + drop + store>(
+        sender: signer,
+        receiver: address,
+        creator: address,
+        token_creation_num: u64,
+    ) acquires TokenTransfers {
+        let token_id = GUID::create_id(creator, token_creation_num);
+        stop_transfer_to<TokenType>(&sender, receiver, &token_id);
     }
 
     // Extra from our pending_transfers and return to gallery
@@ -68,6 +105,12 @@ module AptosFramework::TokenTransfers {
             &mut borrow_global_mut<TokenTransfers<TokenType>>(sender_addr).pending_transfers;
         let pending_tokens = Table::borrow_mut(pending_transfers, &receiver);
         let (_id, token) = Table::remove(pending_tokens, token_id);
+
+        if (Table::count(pending_tokens) == 0) {
+            let (_id, real_pending_transfers) = Table::remove(pending_transfers, &receiver);
+            Table::destroy_empty(real_pending_transfers)
+        };
+
         Token::deposit_token(sender, token)
     }
 
@@ -99,10 +142,16 @@ module AptosFramework::TokenTransfers {
         let owner0_addr = Signer::address_of(&owner0);
         let owner1_addr = Signer::address_of(&owner1);
 
+        assert!(Table::count(&borrow_global<TokenTransfers<u64>>(creator_addr).pending_transfers) == 0, 0);
+
         transfer_to<u64>(&creator, owner0_addr, &token_id, 1);
+        assert!(Table::count(&borrow_global<TokenTransfers<u64>>(creator_addr).pending_transfers) == 1, 1);
         transfer_to<u64>(&creator, owner1_addr, &token_id, 1);
+        assert!(Table::count(&borrow_global<TokenTransfers<u64>>(creator_addr).pending_transfers) == 2, 2);
         receive_from<u64>(&owner0, creator_addr, &token_id);
+        assert!(Table::count(&borrow_global<TokenTransfers<u64>>(creator_addr).pending_transfers) == 1, 3);
         receive_from<u64>(&owner1, creator_addr, &token_id);
+        assert!(Table::count(&borrow_global<TokenTransfers<u64>>(creator_addr).pending_transfers) == 0, 4);
 
         initialize_token_transfers<u64>(&owner0);
         transfer_to<u64>(&owner0, owner1_addr, &token_id, 1);
