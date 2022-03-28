@@ -9,7 +9,7 @@ use super::{
 };
 use crate::{
     ledger_info::LedgerInfo,
-    state_store::state_store_value::StateStoreValue,
+    state_store::state_value::StateValue,
     transaction::{TransactionInfo, Version},
 };
 use anyhow::{bail, ensure, format_err, Context, Result};
@@ -716,7 +716,7 @@ pub struct StateStoreValueProof {
     transaction_info_with_proof: TransactionInfoWithProof,
 
     /// The sparse merkle proof from state root to the account state.
-    transaction_info_to_value_proof: SparseMerkleProof<StateStoreValue>,
+    transaction_info_to_value_proof: SparseMerkleProof<StateValue>,
 }
 
 impl StateStoreValueProof {
@@ -724,7 +724,7 @@ impl StateStoreValueProof {
     /// `transaction_info` and `transaction_info_to_account_proof`.
     pub fn new(
         transaction_info_with_proof: TransactionInfoWithProof,
-        transaction_info_to_value_proof: SparseMerkleProof<StateStoreValue>,
+        transaction_info_to_value_proof: SparseMerkleProof<StateValue>,
     ) -> Self {
         StateStoreValueProof {
             transaction_info_with_proof,
@@ -738,7 +738,7 @@ impl StateStoreValueProof {
     }
 
     /// Returns the `transaction_info_to_account_proof` object in this proof.
-    pub fn transaction_info_to_account_proof(&self) -> &SparseMerkleProof<StateStoreValue> {
+    pub fn transaction_info_to_account_proof(&self) -> &SparseMerkleProof<StateValue> {
         &self.transaction_info_to_value_proof
     }
 
@@ -750,7 +750,7 @@ impl StateStoreValueProof {
         ledger_info: &LedgerInfo,
         state_version: Version,
         value_hash: HashValue,
-        state_store_value: Option<&StateStoreValue>,
+        state_store_value: Option<&StateValue>,
     ) -> Result<()> {
         self.transaction_info_to_value_proof.verify(
             self.transaction_info_with_proof

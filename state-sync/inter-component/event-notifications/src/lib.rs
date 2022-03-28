@@ -12,7 +12,7 @@ use aptos_types::{
     move_resource::MoveStorage,
     on_chain_config,
     on_chain_config::{config_address, ConfigID, OnChainConfigPayload},
-    state_store::state_store_key::StateStoreKey,
+    state_store::state_key::StateKey,
     transaction::Version,
 };
 use channel::{aptos_channel, message_queues::QueueStyle};
@@ -288,8 +288,8 @@ impl EventSubscriptionService {
             .storage
             .read()
             .reader
-            .get_value_with_proof_by_version(
-                StateStoreKey::AccountAddressKey(config_address()),
+            .get_state_value_with_proof_by_version(
+                StateKey::AccountAddressKey(config_address()),
                 version,
             )
             .map_err(|error| {

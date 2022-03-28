@@ -27,17 +27,17 @@ fn put_account_state_set(
 ) -> HashValue {
     let mut cs = ChangeSet::new();
     let expected_new_leaves = account_state_set.len();
-    let value_state_set: HashMap<_, _> = account_state_set
+    let value_set: HashMap<_, _> = account_state_set
         .iter()
         .map(|(address, blob)| {
             (
-                StateStoreKey::AccountAddressKey(*address),
-                StateStoreValue::from(blob.clone()),
+                StateKey::AccountAddressKey(*address),
+                StateValue::from(blob.clone()),
             )
         })
         .collect();
     let root = store
-        .put_value_sets(vec![&value_state_set], None, version, &mut cs)
+        .put_value_sets(vec![&value_set], None, version, &mut cs)
         .unwrap()[0];
     let bumps = cs.counter_bumps(version);
     assert_eq!(bumps.get(LedgerCounter::NewStateNodes), expected_new_nodes);
@@ -81,7 +81,7 @@ fn verify_state_in_store(
     root: HashValue,
 ) {
     let (value, proof) = store
-        .get_value_with_proof_by_version(StateStoreKey::AccountAddressKey(address), version)
+        .get_value_with_proof_by_version(StateKey::AccountAddressKey(address), version)
         .unwrap();
     assert_eq!(
         value.clone().map(AccountStateBlob::from).as_ref(),
@@ -90,7 +90,7 @@ fn verify_state_in_store(
     proof
         .verify(
             root,
-            StateStoreKey::AccountAddressKey(address).hash(),
+            StateKey::AccountAddressKey(address).hash(),
             value.as_ref(),
         )
         .unwrap();
@@ -103,7 +103,7 @@ fn test_empty_store() {
     let store = &db.state_store;
     let address = AccountAddress::new([1u8; AccountAddress::LENGTH]);
     assert!(store
-        .get_value_with_proof_by_version(StateStoreKey::AccountAddressKey(address), 0)
+        .get_value_with_proof_by_version(StateKey::AccountAddressKey(address), 0)
         .is_err());
 }
 
@@ -221,7 +221,7 @@ fn test_retired_records() {
         );
         // root0 is gone.
         assert!(store
-            .get_value_with_proof_by_version(StateStoreKey::AccountAddressKey(address2), 0)
+            .get_value_with_proof_by_version(StateKey::AccountAddressKey(address2), 0)
             .is_err());
         // root1 is still there.
         verify_state_in_store(store, address1, Some(&value1), 1, root1);
@@ -237,7 +237,7 @@ fn test_retired_records() {
         );
         // root1 is gone.
         assert!(store
-            .get_value_with_proof_by_version(StateStoreKey::AccountAddressKey(address2), 1)
+            .get_value_with_proof_by_version(StateKey::AccountAddressKey(address2), 1)
             .is_err());
         // root2 is still there.
         verify_state_in_store(store, address1, Some(&value1), 2, root2);
@@ -251,7 +251,7 @@ proptest! {
 
     #[test]
     fn test_get_account_iter(
-        input in hash_map(any::<StateStoreKey>(), any::<StateStoreValue>(), 1..200)
+        input in hash_map(any::<StateKey>(), any::<StateValue>(), 1..200)
     ) {
         // Convert to a vector so iteration order becomes deterministic.
         let kvs: Vec<_> = input.into_iter().collect();
@@ -280,7 +280,7 @@ proptest! {
 
     #[test]
     fn test_raw_restore(
-        (input, batch1_size) in hash_map(any::<StateStoreKey>(), any::<StateStoreValue>(), 2..1000)
+        (input, batch1_size) in hash_map(any::<StateKey>(), any::<StateValue>(), 2..1000)
             .prop_flat_map(|input| {
                 let len = input.len();
                 (Just(input), 1..len)
@@ -338,7 +338,7 @@ proptest! {
 
     #[test]
     fn test_restore(
-        (input, batch_size) in hash_map(any::<StateStoreKey>(), any::<StateStoreValue>(), 2..1000)
+        (input, batch_size) in hash_map(any::<StateKey>(), any::<StateValue>(), 2..1000)
             .prop_flat_map(|input| {
                 let len = input.len();
                 (Just(input), 1..len*2)
@@ -352,7 +352,7 @@ proptest! {
         let version = (input.len() - 1) as Version;
         let expected_root_hash = store1.get_root_hash(version).unwrap();
         prop_assert_eq!(
-            store1.get_leaf_count(version).unwrap(),
+            store1.get_value_count(version).unwrap(),
             input.len()
         );
 
@@ -372,14 +372,14 @@ proptest! {
         let actual_root_hash = store2.get_root_hash(version).unwrap();
         prop_assert_eq!(actual_root_hash, expected_root_hash);
         prop_assert_eq!(
-            store2.get_leaf_count(version).unwrap(),
+            store2.get_value_count(version).unwrap(),
             input.len()
         );
     }
 
     #[test]
     fn test_get_rightmost_leaf(
-        (input, batch1_size) in hash_map(any::<StateStoreKey>(), any::<StateStoreValue>(), 2..1000)
+        (input, batch1_size) in hash_map(any::<StateKey>(), any::<StateValue>(), 2..1000)
             .prop_flat_map(|input| {
                 let len = input.len();
                 (Just(input), 1..len)
@@ -424,7 +424,7 @@ proptest! {
 
     #[test]
     fn test_get_account_count(
-        input in vec((any::<StateStoreKey>(), any::<StateStoreValue>()), 1..200)
+        input in vec((any::<StateKey>(), any::<StateValue>()), 1..200)
     ) {
         let version = (input.len() - 1) as Version;
         let account_count = input.iter().map(|(k, _)| k).collect::<HashSet<_>>().len();
@@ -433,18 +433,18 @@ proptest! {
         let db = AptosDB::new_for_test(&tmp_dir);
         let store = &db.state_store;
         init_store(store, input.into_iter());
-        assert_eq!(store.get_leaf_count(version).unwrap(), account_count);
+        assert_eq!(store.get_value_count(version).unwrap(), account_count);
     }
 }
 
 // Initializes the state store by inserting one key at each version.
-fn init_store(store: &StateStore, input: impl Iterator<Item = (StateStoreKey, StateStoreValue)>) {
+fn init_store(store: &StateStore, input: impl Iterator<Item = (StateKey, StateValue)>) {
     update_store(store, input, 0);
 }
 
 fn update_store(
     store: &StateStore,
-    input: impl Iterator<Item = (StateStoreKey, StateStoreValue)>,
+    input: impl Iterator<Item = (StateKey, StateValue)>,
     first_version: Version,
 ) {
     for (i, (key, value)) in input.enumerate() {

@@ -88,7 +88,7 @@ use aptos_types::{
         Nibble, ROOT_NIBBLE_HEIGHT,
     },
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
-    state_store::state_store_value::StateStoreValue,
+    state_store::state_value::StateValue,
     transaction::Version,
 };
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey, NodeType};
@@ -146,7 +146,7 @@ pub trait TestValue: Value + Arbitrary + std::fmt::Debug + Eq + PartialEq + 'sta
 // `AccountStateBlob` should import the `Value` trait and implement it there.
 impl Value for aptos_types::account_state_blob::AccountStateBlob {}
 
-impl Value for StateStoreValue {}
+impl Value for StateValue {}
 #[cfg(any(test, feature = "fuzzing"))]
 impl TestValue for aptos_types::account_state_blob::AccountStateBlob {}
 

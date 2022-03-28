@@ -21,10 +21,8 @@ use aptos_types::{
     },
     state_proof::StateProof,
     state_store::{
-        state_store_key::StateStoreKey,
-        state_store_value::{
-            StateStoreValue, StateStoreValueChunkWithProof, StateStoreValueWithProof,
-        },
+        state_key::StateKey,
+        state_value::{StateValue, StateValueChunkWithProof, StateValueWithProof},
     },
     transaction::{
         AccountTransactionsWithProof, TransactionInfo, TransactionListWithProof,
@@ -320,7 +318,7 @@ pub trait DbReader: Send + Sync {
     ///
     /// [`AptosDB::get_latest_account_state`]:
     /// ../aptosdb/struct.AptosDB.html#method.get_latest_account_state
-    fn get_latest_value(&self, state_store_key: StateStoreKey) -> Result<Option<StateStoreValue>> {
+    fn get_latest_state_value(&self, state_store_key: StateKey) -> Result<Option<StateValue>> {
         unimplemented!()
     }
 
@@ -394,12 +392,12 @@ pub trait DbReader: Send + Sync {
 
     /// Returns the account state corresponding to the given version and account address with proof
     /// based on `ledger_version`
-    fn get_value_with_proof(
+    fn get_state_value_with_proof(
         &self,
-        state_store_key: StateStoreKey,
+        state_store_key: StateKey,
         version: Version,
         ledger_version: Version,
-    ) -> Result<StateStoreValueWithProof> {
+    ) -> Result<StateValueWithProof> {
         unimplemented!()
     }
 
@@ -411,11 +409,11 @@ pub trait DbReader: Send + Sync {
     // ../aptosdb/struct.AptosDB.html#method.get_account_state_with_proof_by_version
     //
     // This is used by aptos core (executor) internally.
-    fn get_value_with_proof_by_version(
+    fn get_state_value_with_proof_by_version(
         &self,
-        state_store_key: StateStoreKey,
+        state_key: StateKey,
         version: Version,
-    ) -> Result<(Option<StateStoreValue>, SparseMerkleProof<StateStoreValue>)> {
+    ) -> Result<(Option<StateValue>, SparseMerkleProof<StateValue>)> {
         unimplemented!()
     }
 
@@ -482,17 +480,17 @@ pub trait DbReader: Send + Sync {
     }
 
     /// Returns total number of leaves in state store at given version.
-    fn get_state_store_leaf_count(&self, version: Version) -> Result<usize> {
+    fn get_state_leaf_count(&self, version: Version) -> Result<usize> {
         unimplemented!()
     }
 
     /// Get a chunk of state store value, addressed by the index.
-    fn get_value_chunk_with_proof(
+    fn get_state_value_chunk_with_proof(
         &self,
         version: Version,
         start_idx: usize,
         chunk_size: usize,
-    ) -> Result<StateStoreValueChunkWithProof> {
+    ) -> Result<StateValueChunkWithProof> {
         unimplemented!()
     }
 
@@ -512,8 +510,8 @@ impl MoveStorage for &dyn DbReader {
         access_path: AccessPath,
         version: Version,
     ) -> Result<Vec<u8>> {
-        let (state_store_value, _) = self.get_value_with_proof_by_version(
-            StateStoreKey::AccountAddressKey(access_path.address),
+        let (state_store_value, _) = self.get_state_value_with_proof_by_version(
+            StateKey::AccountAddressKey(access_path.address),
             version,
         )?;
         let account_state =
@@ -530,8 +528,8 @@ impl MoveStorage for &dyn DbReader {
     fn fetch_config_by_version(&self, config_id: ConfigID, version: Version) -> Result<Vec<u8>> {
         let aptos_root_state = AccountState::try_from(
             &self
-                .get_value_with_proof_by_version(
-                    StateStoreKey::AccountAddressKey(aptos_root_address()),
+                .get_state_value_with_proof_by_version(
+                    StateKey::AccountAddressKey(aptos_root_address()),
                     version,
                 )?
                 .0
@@ -595,7 +593,7 @@ pub trait DbWriter: Send + Sync {
         &self,
         version: Version,
         expected_root_hash: HashValue,
-    ) -> Result<Box<dyn StateSnapshotReceiver<StateStoreValue>>> {
+    ) -> Result<Box<dyn StateSnapshotReceiver<StateValue>>> {
         unimplemented!()
     }
 }
@@ -635,23 +633,23 @@ impl DbReaderWriter {
 /// Network types for storage service
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum StorageRequest {
-    GetValueWithProofByVersionRequest(Box<GetValueWithProofByVersionRequest>),
+    GetStateValueWithProofByVersionRequest(Box<GetStateValueWithProofByVersionRequest>),
     GetStartupInfoRequest,
     SaveTransactionsRequest(Box<SaveTransactionsRequest>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
-pub struct GetValueWithProofByVersionRequest {
+pub struct GetStateValueWithProofByVersionRequest {
     /// The access key for the resource
-    pub state_store_key: StateStoreKey,
+    pub state_store_key: StateKey,
 
     /// The version the query is based on.
     pub version: Version,
 }
 
-impl GetValueWithProofByVersionRequest {
+impl GetStateValueWithProofByVersionRequest {
     /// Constructor.
-    pub fn new(state_store_key: StateStoreKey, version: Version) -> Self {
+    pub fn new(state_store_key: StateKey, version: Version) -> Self {
         Self {
             state_store_key,
             version,

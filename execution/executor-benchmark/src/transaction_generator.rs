@@ -12,7 +12,7 @@ use aptos_types::{
     account_config::{aptos_root_address, AccountResource},
     account_state_blob::AccountStateBlob,
     chain_id::ChainId,
-    state_store::state_store_key::StateStoreKey,
+    state_store::state_key::StateKey,
     transaction::{RawTransaction, SignedTransaction, Transaction, Version},
 };
 use chrono::Local;
@@ -341,7 +341,7 @@ impl TransactionGenerator {
         for account in &self.accounts_cache {
             let address = account.address;
             let state_store_value = db
-                .get_latest_value(StateStoreKey::AccountAddressKey(address))
+                .get_latest_state_value(StateKey::AccountAddressKey(address))
                 .expect("Failed to query storage.")
                 .expect("Account must exist.");
             let account_resource =

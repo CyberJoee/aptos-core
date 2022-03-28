@@ -10,13 +10,13 @@ use aptos_secure_net::NetworkClient;
 use aptos_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::SparseMerkleProof,
-    state_store::{state_store_key::StateStoreKey, state_store_value::StateStoreValue},
+    state_store::{state_key::StateKey, state_value::StateValue},
     transaction::{TransactionToCommit, Version},
 };
 use serde::de::DeserializeOwned;
 use std::net::SocketAddr;
 use storage_interface::{
-    DbReader, DbWriter, Error, GetValueWithProofByVersionRequest, SaveTransactionsRequest,
+    DbReader, DbWriter, Error, GetStateValueWithProofByVersionRequest, SaveTransactionsRequest,
     StartupInfo, StorageRequest,
 };
 
@@ -52,15 +52,16 @@ impl StorageClient {
         bcs::from_bytes(&result)?
     }
 
-    pub fn get_value_with_proof_by_version(
+    pub fn get_state_value_with_proof_by_version(
         &self,
-        state_store_key: StateStoreKey,
+        state_key: StateKey,
         version: Version,
-    ) -> std::result::Result<(Option<StateStoreValue>, SparseMerkleProof<StateStoreValue>), Error>
-    {
-        self.request(StorageRequest::GetValueWithProofByVersionRequest(Box::new(
-            GetValueWithProofByVersionRequest::new(state_store_key, version),
-        )))
+    ) -> std::result::Result<(Option<StateValue>, SparseMerkleProof<StateValue>), Error> {
+        self.request(StorageRequest::GetStateValueWithProofByVersionRequest(
+            Box::new(GetStateValueWithProofByVersionRequest::new(
+                state_key, version,
+            )),
+        ))
     }
 
     pub fn get_startup_info(&self) -> std::result::Result<Option<StartupInfo>, Error> {
@@ -80,15 +81,13 @@ impl StorageClient {
 }
 
 impl DbReader for StorageClient {
-    fn get_value_with_proof_by_version(
+    fn get_state_value_with_proof_by_version(
         &self,
-        resource_key: StateStoreKey,
+        state_key: StateKey,
         version: u64,
-    ) -> Result<(Option<StateStoreValue>, SparseMerkleProof<StateStoreValue>)> {
-        Ok(Self::get_value_with_proof_by_version(
-            self,
-            resource_key,
-            version,
+    ) -> Result<(Option<StateValue>, SparseMerkleProof<StateValue>)> {
+        Ok(Self::get_state_value_with_proof_by_version(
+            self, state_key, version,
         )?)
     }
 

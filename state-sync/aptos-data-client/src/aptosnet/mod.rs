@@ -21,7 +21,7 @@ use aptos_time_service::{TimeService, TimeServiceTrait};
 use aptos_types::{
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
-    state_store::state_store_value::StateStoreValueChunkWithProof,
+    state_store::state_value::StateValueChunkWithProof,
     transaction::{TransactionListWithProof, TransactionOutputListWithProof, Version},
 };
 use async_trait::async_trait;
@@ -361,7 +361,7 @@ impl AptosDataClient for AptosNetDataClient {
         version: u64,
         start_account_index: u64,
         end_account_index: u64,
-    ) -> Result<Response<StateStoreValueChunkWithProof>> {
+    ) -> Result<Response<StateValueChunkWithProof>> {
         let request = StorageServiceRequest::GetAccountStatesChunkWithProof(
             AccountStatesChunkWithProofRequest {
                 version,

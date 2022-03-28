@@ -9,7 +9,7 @@ use aptos_types::{
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     on_chain_config::OnChainConfigPayload,
-    state_store::state_store_key::StateStoreKey,
+    state_store::state_key::StateKey,
     transaction::{SignedTransaction, VMValidatorResult},
 };
 use aptos_vm::AptosVM;
@@ -112,7 +112,7 @@ pub fn get_account_sequence_number(
             "Injected error in get_account_sequence_number"
         ))
     });
-    match storage.get_latest_value(StateStoreKey::AccountAddressKey(address))? {
+    match storage.get_latest_state_value(StateKey::AccountAddressKey(address))? {
         Some(blob) => {
             if let Ok(Some(crsn)) = AccountState::try_from(&blob)?.get_crsn_resource() {
                 return Ok(AccountSequenceInfo::CRSN {

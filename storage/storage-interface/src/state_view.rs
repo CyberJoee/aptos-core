@@ -13,7 +13,7 @@ use aptos_types::{
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     proof::SparseMerkleProof,
-    state_store::{state_store_key::StateStoreKey, state_store_value::StateStoreValue},
+    state_store::{state_key::StateKey, state_value::StateValue},
     transaction::{Version, PRE_GENESIS_VERSION},
 };
 use move_core_types::account_address::AccountAddress;
@@ -42,7 +42,7 @@ pub struct VerifiedStateView {
     latest_persistent_state_root: HashValue,
 
     /// The in-memory version of sparse Merkle tree of which the states haven't been committed.
-    speculative_state: FrozenSparseMerkleTree<StateStoreValue>,
+    speculative_state: FrozenSparseMerkleTree<StateValue>,
 
     /// The cache of verified account states from `reader` and `speculative_state_view`,
     /// represented by a hashmap with an account address as key and a pair of an ordered
@@ -81,7 +81,7 @@ pub struct VerifiedStateView {
     ///        +---------------------------------------------------------+
     /// ```
     account_to_state_cache: RwLock<HashMap<AccountAddress, AccountState>>,
-    state_proof_cache: RwLock<HashMap<HashValue, SparseMerkleProof<StateStoreValue>>>,
+    state_proof_cache: RwLock<HashMap<HashValue, SparseMerkleProof<StateValue>>>,
 }
 
 impl VerifiedStateView {
@@ -93,7 +93,7 @@ impl VerifiedStateView {
         reader: Arc<dyn DbReader>,
         latest_persistent_version: Option<Version>,
         latest_persistent_state_root: HashValue,
-        speculative_state: SparseMerkleTree<StateStoreValue>,
+        speculative_state: SparseMerkleTree<StateValue>,
     ) -> Self {
         // Hack: When there's no transaction in the db but state tree root hash is not the
         // placeholder hash, it implies that there's pre-genesis state present.
@@ -125,9 +125,9 @@ impl VerifiedStateView {
 }
 
 pub struct StateCache {
-    pub frozen_base: FrozenSparseMerkleTree<StateStoreValue>,
+    pub frozen_base: FrozenSparseMerkleTree<StateValue>,
     pub accounts: HashMap<AccountAddress, AccountState>,
-    pub proofs: HashMap<HashValue, SparseMerkleProof<StateStoreValue>>,
+    pub proofs: HashMap<HashValue, SparseMerkleProof<StateValue>>,
 }
 
 impl StateView for VerifiedStateView {
@@ -138,7 +138,7 @@ impl StateView for VerifiedStateView {
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
         let address = access_path.address;
         let path = &access_path.path;
-        let state_store_key = StateStoreKey::AccountAddressKey(address);
+        let state_store_key = StateKey::AccountAddressKey(address);
 
         // Lock for read first:
         // Lock for read first:
@@ -157,7 +157,7 @@ impl StateView for VerifiedStateView {
                 let (state_store_value, proof) = match self.latest_persistent_version {
                     Some(version) => self
                         .reader
-                        .get_value_with_proof_by_version(state_store_key, version)?,
+                        .get_state_value_with_proof_by_version(state_store_key, version)?,
                     None => (None, SparseMerkleProof::new(None, vec![])),
                 };
                 proof
@@ -183,7 +183,7 @@ impl StateView for VerifiedStateView {
         };
 
         // Hack: Convert the state store value to account blob option as that is the
-        // only type of state resource we support for now. This needs to change once we start
+        // only type of state value we support for now. This needs to change once we start
         // supporting tables and other fine grained resources.
 
         // Now enter the locked region, and write if still empty.

@@ -50,7 +50,7 @@ pub use script::{
     TypeArgumentABI,
 };
 
-use crate::state_store::{state_store_key::StateStoreKey, state_store_value::StateStoreValue};
+use crate::state_store::{state_key::StateKey, state_value::StateValue};
 use std::{collections::BTreeSet, hash::Hash, ops::Deref, sync::atomic::AtomicU64};
 pub use transaction_argument::{parse_transaction_argument, TransactionArgument, VecBytes};
 
@@ -1054,7 +1054,7 @@ impl Display for TransactionInfo {
 pub struct TransactionToCommit {
     transaction: Transaction,
     transaction_info: TransactionInfo,
-    state_store_updates: HashMap<StateStoreKey, StateStoreValue>,
+    state_updates: HashMap<StateKey, StateValue>,
     jf_node_hashes: Option<HashMap<NibblePath, HashValue>>,
     write_set: WriteSet,
     events: Vec<ContractEvent>,
@@ -1064,7 +1064,7 @@ impl TransactionToCommit {
     pub fn new(
         transaction: Transaction,
         transaction_info: TransactionInfo,
-        state_store_updates: HashMap<StateStoreKey, StateStoreValue>,
+        state_updates: HashMap<StateKey, StateValue>,
         jf_node_hashes: Option<HashMap<NibblePath, HashValue>>,
         write_set: WriteSet,
         events: Vec<ContractEvent>,
@@ -1072,7 +1072,7 @@ impl TransactionToCommit {
         TransactionToCommit {
             transaction,
             transaction_info,
-            state_store_updates,
+            state_updates,
             jf_node_hashes,
             write_set,
             events,
@@ -1092,8 +1092,8 @@ impl TransactionToCommit {
         self.transaction_info = txn_info
     }
 
-    pub fn state_store_updates(&self) -> &HashMap<StateStoreKey, StateStoreValue> {
-        &self.state_store_updates
+    pub fn state_updates(&self) -> &HashMap<StateKey, StateValue> {
+        &self.state_updates
     }
 
     pub fn jf_node_hashes(&self) -> Option<&HashMap<NibblePath, HashValue>> {

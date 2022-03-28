@@ -13,7 +13,7 @@ use aptos_config::config::StorageServiceConfig;
 use aptos_logger::prelude::*;
 use aptos_types::{
     epoch_change::EpochChangeProof,
-    state_store::state_store_value::StateStoreValueChunkWithProof,
+    state_store::state_value::StateValueChunkWithProof,
     transaction::{TransactionListWithProof, TransactionOutputListWithProof, Version},
 };
 use bounded_executor::BoundedExecutor;
@@ -341,7 +341,7 @@ pub trait StorageReaderInterface: Clone + Send + 'static {
         version: u64,
         start_account_index: u64,
         end_account_index: u64,
-    ) -> Result<StateStoreValueChunkWithProof, Error>;
+    ) -> Result<StateValueChunkWithProof, Error>;
 }
 
 /// The underlying implementation of the StorageReaderInterface, used by the
@@ -530,7 +530,7 @@ impl StorageReaderInterface for StorageReader {
     fn get_number_of_accounts(&self, version: u64) -> Result<u64, Error> {
         let number_of_accounts = self
             .storage
-            .get_state_store_leaf_count(version)
+            .get_state_leaf_count(version)
             .map_err(|error| Error::StorageErrorEncountered(error.to_string()))?;
         Ok(number_of_accounts as u64)
     }
@@ -540,11 +540,11 @@ impl StorageReaderInterface for StorageReader {
         version: u64,
         start_account_index: u64,
         end_account_index: u64,
-    ) -> Result<StateStoreValueChunkWithProof, Error> {
+    ) -> Result<StateValueChunkWithProof, Error> {
         let expected_num_accounts = inclusive_range_len(start_account_index, end_account_index)?;
         let account_states_chunk_with_proof = self
             .storage
-            .get_value_chunk_with_proof(
+            .get_state_value_chunk_with_proof(
                 version,
                 start_account_index as usize,
                 expected_num_accounts as usize,

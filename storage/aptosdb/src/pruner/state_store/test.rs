@@ -7,7 +7,7 @@ use aptos_temppath::TempPath;
 use aptos_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    state_store::{state_store_key::StateStoreKey, state_store_value::StateStoreValue},
+    state_store::{state_key::StateKey, state_value::StateValue},
 };
 use std::collections::HashMap;
 
@@ -22,8 +22,8 @@ fn put_account_state_set(
         .iter()
         .map(|(address, blob)| {
             (
-                StateStoreKey::AccountAddressKey(*address),
-                StateStoreValue::from(blob.clone()),
+                StateKey::AccountAddressKey(*address),
+                StateValue::from(blob.clone()),
             )
         })
         .collect();
@@ -42,7 +42,7 @@ fn verify_state_in_store(
     version: Version,
 ) {
     let (value, _proof) = state_store
-        .get_value_with_proof_by_version(StateStoreKey::AccountAddressKey(address), version)
+        .get_value_with_proof_by_version(StateKey::AccountAddressKey(address), version)
         .unwrap();
 
     assert_eq!(
@@ -116,7 +116,7 @@ fn test_state_store_pruner() {
             .unwrap();
         // root0 is gone.
         assert!(state_store
-            .get_value_with_proof_by_version(StateStoreKey::AccountAddressKey(address), 0)
+            .get_value_with_proof_by_version(StateKey::AccountAddressKey(address), 0)
             .is_err());
         // root1 is still there.
         verify_state_in_store(state_store, address, Some(&value1), 1);
@@ -132,7 +132,7 @@ fn test_state_store_pruner() {
             .unwrap();
         // root1 is gone.
         assert!(state_store
-            .get_value_with_proof_by_version(StateStoreKey::AccountAddressKey(address), 1)
+            .get_value_with_proof_by_version(StateKey::AccountAddressKey(address), 1)
             .is_err());
         // root2 is still there.
         verify_state_in_store(state_store, address, Some(&value2), 2);

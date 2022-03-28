@@ -10,7 +10,7 @@ use aptos_types::{
     account_config::{aptos_root_address, treasury_compliance_account_address, xus_tag},
     account_state::AccountState,
     block_metadata::BlockMetadata,
-    state_store::state_store_key::StateStoreKey,
+    state_store::state_key::StateKey,
     transaction::{Script, Transaction, TransactionPayload, WriteSetPayload},
     trusted_state::TrustedState,
     validator_signer::ValidatorSigner,
@@ -47,14 +47,10 @@ fn test_genesis() {
 
     let aptos_root_account = db
         .reader
-        .get_value_with_proof(StateStoreKey::AccountAddressKey(aptos_root_address()), 0, 0)
+        .get_state_value_with_proof(StateKey::AccountAddressKey(aptos_root_address()), 0, 0)
         .unwrap();
     aptos_root_account
-        .verify(
-            li,
-            0,
-            StateStoreKey::AccountAddressKey(aptos_root_address()),
-        )
+        .verify(li, 0, StateKey::AccountAddressKey(aptos_root_address()))
         .unwrap();
 }
 
@@ -78,16 +74,16 @@ fn test_reconfiguration() {
     let current_version = state_proof.latest_ledger_info().version();
     let validator_account_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(validator_account),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(validator_account),
             current_version,
             current_version,
         )
         .unwrap();
     let aptos_root_account_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(aptos_root_address()),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(aptos_root_address()),
             current_version,
             current_version,
         )
@@ -179,8 +175,8 @@ fn test_reconfiguration() {
     // test validator's key under validator_account is as expected
     let validator_account_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(validator_account),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(validator_account),
             current_version,
             current_version,
         )
@@ -201,16 +197,16 @@ fn test_reconfiguration() {
     // validator set since the reconfiguration was invoked
     let validator_account_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(validator_account),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(validator_account),
             current_version,
             current_version,
         )
         .unwrap();
     let aptos_root_account_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(aptos_root_address()),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(aptos_root_address()),
             current_version,
             current_version,
         )
@@ -236,8 +232,8 @@ fn test_reconfiguration() {
     // test validator's key in the validator set is as expected
     let aptos_root_account_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(aptos_root_address()),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(aptos_root_address()),
             current_version,
             current_version,
         )

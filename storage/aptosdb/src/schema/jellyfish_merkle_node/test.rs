@@ -12,7 +12,7 @@ proptest! {
     fn test_jellyfish_merkle_node_schema(
         node_key in any::<NodeKey>(),
         account_key in any::<HashValue>(),
-        value in any::<StateStoreValue>(),
+        value in any::<StateValue>(),
     ) {
         assert_encode_decode::<JellyfishMerkleNodeSchema>(
             &node_key,

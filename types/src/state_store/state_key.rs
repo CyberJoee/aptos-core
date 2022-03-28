@@ -15,21 +15,21 @@ const ACCOUNT_ADDRESS_KEY_PREFIX: &str = "acc_blb_|";
     Clone, Debug, CryptoHasher, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd, Hash,
 )]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
-pub enum StateStoreKey {
+pub enum StateKey {
     AccountAddressKey(AccountAddress),
 }
 
-struct RawStateStoreKey {
+struct RawStateKey {
     bytes: Vec<u8>,
 }
 
-impl From<&StateStoreKey> for RawStateStoreKey {
-    fn from(key: &StateStoreKey) -> Self {
+impl From<&StateKey> for RawStateKey {
+    fn from(key: &StateKey) -> Self {
         match key {
-            StateStoreKey::AccountAddressKey(account_address) => {
+            StateKey::AccountAddressKey(account_address) => {
                 let mut account_address_prefix = ACCOUNT_ADDRESS_KEY_PREFIX.as_bytes().to_vec();
                 account_address_prefix.extend(account_address.to_vec());
-                RawStateStoreKey {
+                RawStateKey {
                     bytes: account_address_prefix,
                 }
             }
@@ -37,12 +37,12 @@ impl From<&StateStoreKey> for RawStateStoreKey {
     }
 }
 
-impl CryptoHash for StateStoreKey {
-    type Hasher = StateStoreKeyHasher;
+impl CryptoHash for StateKey {
+    type Hasher = StateKeyHasher;
 
     fn hash(&self) -> HashValue {
         let mut state = Self::Hasher::default();
-        state.update(RawStateStoreKey::from(self).bytes.as_ref());
+        state.update(RawStateKey::from(self).bytes.as_ref());
         state.finish()
     }
 }

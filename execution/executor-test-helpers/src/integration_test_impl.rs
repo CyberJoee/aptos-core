@@ -17,7 +17,7 @@ use aptos_types::{
     },
     account_state::AccountState,
     event::EventKey,
-    state_store::{state_store_key::StateStoreKey, state_store_value::StateStoreValueWithProof},
+    state_store::{state_key::StateKey, state_value::StateValueWithProof},
     transaction::{
         authenticator::AuthenticationKey, Transaction, TransactionListWithProof,
         TransactionWithProof, WriteSetPayload,
@@ -298,8 +298,8 @@ pub fn test_execution_with_storage_impl() -> Arc<AptosDB> {
 
     let account1_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(account1),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(account1),
             current_version,
             current_version,
         )
@@ -308,8 +308,8 @@ pub fn test_execution_with_storage_impl() -> Arc<AptosDB> {
 
     let account2_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(account2),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(account2),
             current_version,
             current_version,
         )
@@ -318,8 +318,8 @@ pub fn test_execution_with_storage_impl() -> Arc<AptosDB> {
 
     let account3_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(account3),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(account3),
             current_version,
             current_version,
         )
@@ -400,8 +400,8 @@ pub fn test_execution_with_storage_impl() -> Arc<AptosDB> {
 
     let account4_state = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(account4),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(account4),
             current_version,
             current_version,
         )
@@ -459,8 +459,8 @@ pub fn test_execution_with_storage_impl() -> Arc<AptosDB> {
 
     let account1_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(account1),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(account1),
             current_version,
             current_version,
         )
@@ -469,8 +469,8 @@ pub fn test_execution_with_storage_impl() -> Arc<AptosDB> {
 
     let account3_state_with_proof = db
         .reader
-        .get_value_with_proof(
-            StateStoreKey::AccountAddressKey(account3),
+        .get_state_value_with_proof(
+            StateKey::AccountAddressKey(account3),
             current_version,
             current_version,
         )
@@ -548,10 +548,7 @@ pub fn create_db_and_executor<P: AsRef<std::path::Path>>(
     (db, dbrw, executor, waypoint)
 }
 
-pub fn verify_account_balance<F>(
-    account_state_with_proof: &StateStoreValueWithProof,
-    f: F,
-) -> Result<()>
+pub fn verify_account_balance<F>(account_state_with_proof: &StateValueWithProof, f: F) -> Result<()>
 where
     F: Fn(u64) -> bool,
 {

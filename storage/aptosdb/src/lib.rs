@@ -72,10 +72,8 @@ use aptos_types::{
     },
     state_proof::StateProof,
     state_store::{
-        state_store_key::StateStoreKey,
-        state_store_value::{
-            StateStoreValue, StateStoreValueChunkWithProof, StateStoreValueWithProof,
-        },
+        state_key::StateKey,
+        state_value::{StateValue, StateValueChunkWithProof, StateValueWithProof},
     },
     transaction::{
         AccountTransactionsWithProof, TransactionInfo, TransactionListWithProof, TransactionOutput,
@@ -590,7 +588,7 @@ impl AptosDB {
 
             let account_state_sets = txns_to_commit
                 .iter()
-                .map(|txn_to_commit| txn_to_commit.state_store_updates())
+                .map(|txn_to_commit| txn_to_commit.state_updates())
                 .collect::<Vec<_>>();
 
             let node_hashes = txns_to_commit
@@ -676,13 +674,13 @@ impl DbReader for AptosDB {
         })
     }
 
-    fn get_latest_value(&self, state_store_key: StateStoreKey) -> Result<Option<StateStoreValue>> {
-        gauged_api("get_latest_value", || {
+    fn get_latest_state_value(&self, state_key: StateKey) -> Result<Option<StateValue>> {
+        gauged_api("get_latest_state_value", || {
             let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
             let version = ledger_info_with_sigs.ledger_info().version();
             let (blob, _proof) = self
                 .state_store
-                .get_value_with_proof_by_version(state_store_key, version)?;
+                .get_value_with_proof_by_version(state_key, version)?;
             Ok(blob)
         })
     }
@@ -980,12 +978,12 @@ impl DbReader for AptosDB {
         })
     }
 
-    fn get_value_with_proof(
+    fn get_state_value_with_proof(
         &self,
-        state_store_key: StateStoreKey,
+        state_store_key: StateKey,
         version: Version,
         ledger_version: Version,
-    ) -> Result<StateStoreValueWithProof> {
+    ) -> Result<StateValueWithProof> {
         gauged_api("get_value_with_proof", || {
             ensure!(
                 version <= ledger_version,
@@ -1009,7 +1007,7 @@ impl DbReader for AptosDB {
             let (state_store_value, sparse_merkle_proof) = self
                 .state_store
                 .get_value_with_proof_by_version(state_store_key, version)?;
-            Ok(StateStoreValueWithProof::new(
+            Ok(StateValueWithProof::new(
                 version,
                 state_store_value,
                 StateStoreValueProof::new(txn_info_with_proof, sparse_merkle_proof),
@@ -1021,11 +1019,11 @@ impl DbReader for AptosDB {
         gauged_api("get_startup_info", || self.ledger_store.get_startup_info())
     }
 
-    fn get_value_with_proof_by_version(
+    fn get_state_value_with_proof_by_version(
         &self,
-        state_store_key: StateStoreKey,
+        state_store_key: StateKey,
         version: Version,
-    ) -> Result<(Option<StateStoreValue>, SparseMerkleProof<StateStoreValue>)> {
+    ) -> Result<(Option<StateValue>, SparseMerkleProof<StateValue>)> {
         gauged_api("get_account_state_with_proof_by_version", || {
             self.state_store
                 .get_value_with_proof_by_version(state_store_key, version)
@@ -1182,19 +1180,19 @@ impl DbReader for AptosDB {
         })
     }
 
-    fn get_state_store_leaf_count(&self, version: Version) -> Result<usize> {
-        gauged_api("get_account_count", || {
-            self.state_store.get_leaf_count(version)
+    fn get_state_leaf_count(&self, version: Version) -> Result<usize> {
+        gauged_api("get_state_leaf_count", || {
+            self.state_store.get_value_count(version)
         })
     }
 
-    fn get_value_chunk_with_proof(
+    fn get_state_value_chunk_with_proof(
         &self,
         version: Version,
         first_index: usize,
         chunk_size: usize,
-    ) -> Result<StateStoreValueChunkWithProof> {
-        gauged_api("get_account_chunk_with_proof", || {
+    ) -> Result<StateValueChunkWithProof> {
+        gauged_api("get_state_value_chunk_with_proof", || {
             self.state_store
                 .get_value_chunk_with_proof(version, first_index, chunk_size)
         })
@@ -1211,8 +1209,8 @@ impl ModuleResolver for AptosDB {
     type Error = anyhow::Error;
 
     fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>> {
-        let (resource_value_with_proof, _) = self.get_value_with_proof_by_version(
-            StateStoreKey::AccountAddressKey(*module_id.address()),
+        let (resource_value_with_proof, _) = self.get_state_value_with_proof_by_version(
+            StateKey::AccountAddressKey(*module_id.address()),
             self.get_latest_version()?,
         )?;
         if let Some(account_state_blob) = resource_value_with_proof {
@@ -1228,8 +1226,8 @@ impl ResourceResolver for AptosDB {
     type Error = anyhow::Error;
 
     fn get_resource(&self, address: &AccountAddress, tag: &StructTag) -> Result<Option<Vec<u8>>> {
-        let (resource_value_with_proof, _) = self.get_value_with_proof_by_version(
-            StateStoreKey::AccountAddressKey(*address),
+        let (resource_value_with_proof, _) = self.get_state_value_with_proof_by_version(
+            StateKey::AccountAddressKey(*address),
             self.get_latest_version()?,
         )?;
         if let Some(account_state_blob) = resource_value_with_proof {
@@ -1323,7 +1321,7 @@ impl DbWriter for AptosDB {
                 // -1 for "not fully migrated", -2 for "error on get_account_count()"
                 APTOS_STORAGE_LATEST_ACCOUNT_COUNT.set(
                     self.state_store
-                        .get_leaf_count(last_version)
+                        .get_value_count(last_version)
                         .map_or(-1, |c| c as i64),
                 );
 
@@ -1338,7 +1336,7 @@ impl DbWriter for AptosDB {
         &self,
         version: Version,
         expected_root_hash: HashValue,
-    ) -> Result<Box<dyn StateSnapshotReceiver<StateStoreValue>>> {
+    ) -> Result<Box<dyn StateSnapshotReceiver<StateValue>>> {
         gauged_api("get_state_snapshot_receiver", || {
             self.state_store
                 .get_snapshot_receiver(version, expected_root_hash)

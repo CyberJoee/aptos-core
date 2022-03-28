@@ -17,7 +17,7 @@ use aptos_types::{
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{SparseMerkleRangeProof, TransactionInfoListWithProof},
-    state_store::state_store_value::StateStoreValueChunkWithProof,
+    state_store::state_value::StateValueChunkWithProof,
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionListWithProof,
         TransactionOutput, TransactionOutputListWithProof, TransactionPayload, TransactionStatus,
@@ -98,7 +98,7 @@ async fn test_get_account_states_chunk_with_proof() {
         account_blobs.push((HashValue::zero(), vec![].into()));
     }
     let expected_response =
-        StorageServiceResponse::AccountStatesChunkWithProof(StateStoreValueChunkWithProof {
+        StorageServiceResponse::AccountStatesChunkWithProof(StateValueChunkWithProof {
             first_index: start_account_index,
             last_index: end_account_index,
             first_key: HashValue::zero(),
@@ -518,16 +518,16 @@ impl DbReader for MockDbReader {
         ))
     }
 
-    fn get_state_store_leaf_count(&self, _version: Version) -> Result<usize> {
+    fn get_state_leaf_count(&self, _version: Version) -> Result<usize> {
         Ok(NUM_ACCOUNTS_AT_VERSION as usize)
     }
 
-    fn get_value_chunk_with_proof(
+    fn get_state_value_chunk_with_proof(
         &self,
         _version: Version,
         start_idx: usize,
         chunk_size: usize,
-    ) -> Result<StateStoreValueChunkWithProof> {
+    ) -> Result<StateValueChunkWithProof> {
         // Create empty account blobs
         let mut account_blobs = vec![];
         for _ in 0..chunk_size {
@@ -535,7 +535,7 @@ impl DbReader for MockDbReader {
         }
 
         // Create an account states chunk with proof
-        let account_states_chunk_with_proof = StateStoreValueChunkWithProof {
+        let account_states_chunk_with_proof = StateValueChunkWithProof {
             first_index: start_idx as u64,
             last_index: (start_idx + chunk_size - 1) as u64,
             first_key: HashValue::zero(),

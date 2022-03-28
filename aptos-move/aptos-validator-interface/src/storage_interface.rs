@@ -9,7 +9,7 @@ use aptos_types::{
     account_state::AccountState,
     contract_event::EventWithProof,
     event::EventKey,
-    state_store::state_store_key::StateStoreKey,
+    state_store::state_key::StateKey,
     transaction::{Transaction, Version},
 };
 use aptosdb::AptosDB;
@@ -36,7 +36,7 @@ impl AptosValidatorInterface for DBDebuggerInterface {
         version: Version,
     ) -> Result<Option<AccountState>> {
         self.0
-            .get_value_with_proof_by_version(StateStoreKey::AccountAddressKey(account), version)?
+            .get_state_value_with_proof_by_version(StateKey::AccountAddressKey(account), version)?
             .0
             .map(|s| AccountState::try_from(&s))
             .transpose()

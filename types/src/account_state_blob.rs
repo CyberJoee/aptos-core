@@ -4,7 +4,7 @@
 use crate::{
     account_config::{AccountResource, BalanceResource, DiemAccountResource},
     account_state::AccountState,
-    state_store::state_store_value::StateStoreValue,
+    state_store::state_value::StateValue,
 };
 use anyhow::{anyhow, Error, Result};
 use aptos_crypto::{
@@ -99,8 +99,8 @@ impl TryFrom<&AccountState> for AccountStateBlob {
     }
 }
 
-impl From<StateStoreValue> for AccountStateBlob {
-    fn from(state_store_value: StateStoreValue) -> Self {
+impl From<StateValue> for AccountStateBlob {
+    fn from(state_store_value: StateValue) -> Self {
         AccountStateBlob::from(state_store_value.bytes)
     }
 }
@@ -171,7 +171,7 @@ impl Arbitrary for AccountStateBlob {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state_store::state_store_value::StateStoreValueWithProof;
+    use crate::state_store::state_value::StateValueWithProof;
     use bcs::test_helpers::assert_canonical_encode_decode;
     use proptest::collection::vec;
 
@@ -193,7 +193,7 @@ mod tests {
         }
 
         #[test]
-        fn account_state_with_proof_bcs_roundtrip(account_state_with_proof in any::<StateStoreValueWithProof>()) {
+        fn account_state_with_proof_bcs_roundtrip(account_state_with_proof in any::<StateValueWithProof>()) {
             assert_canonical_encode_decode(account_state_with_proof);
         }
     }

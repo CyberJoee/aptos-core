@@ -20,7 +20,7 @@ use aptos_types::{
     nibble::nibble_path::NibblePath,
     on_chain_config,
     proof::accumulator::InMemoryAccumulator,
-    state_store::{state_store_key::StateStoreKey, state_store_value::StateStoreValue},
+    state_store::{state_key::StateKey, state_value::StateValue},
     transaction::{
         Transaction, TransactionInfo, TransactionOutput, TransactionPayload, TransactionStatus,
     },
@@ -159,9 +159,9 @@ impl ApplyChunkOutput {
         new_epoch: bool,
         to_keep: &[(Transaction, ParsedTransactionOutput)],
     ) -> Result<(
-        Vec<HashMap<StateStoreKey, StateStoreValue>>,
+        Vec<HashMap<StateKey, StateValue>>,
         Vec<(HashValue, HashMap<NibblePath, HashValue>)>,
-        SparseMerkleTree<StateStoreValue>,
+        SparseMerkleTree<StateValue>,
         Option<EpochState>,
     )> {
         let StateCache {
@@ -183,8 +183,8 @@ impl ApplyChunkOutput {
                     .iter()
                     .map(|(addr, state)| {
                         Ok((
-                            StateStoreKey::AccountAddressKey(*addr),
-                            StateStoreValue::from(AccountStateBlob::try_from(state)?),
+                            StateKey::AccountAddressKey(*addr),
+                            StateValue::from(AccountStateBlob::try_from(state)?),
                         ))
                     })
                     .collect::<Result<HashMap<_, _>>>()
@@ -218,8 +218,8 @@ impl ApplyChunkOutput {
     }
 
     fn state_store_updates_to_smt_updates(
-        account_blobs: &[HashMap<StateStoreKey, StateStoreValue>],
-    ) -> Vec<Vec<(HashValue, &StateStoreValue)>> {
+        account_blobs: &[HashMap<StateKey, StateValue>],
+    ) -> Vec<Vec<(HashValue, &StateValue)>> {
         account_blobs
             .iter()
             .map(|m| {
@@ -256,7 +256,7 @@ impl ApplyChunkOutput {
 
     fn assemble_ledger_diff(
         to_keep: Vec<(Transaction, ParsedTransactionOutput)>,
-        state_store_updates: Vec<HashMap<StateStoreKey, StateStoreValue>>,
+        state_updates: Vec<HashMap<StateKey, StateValue>>,
         roots_with_node_hashes: Vec<(HashValue, HashMap<NibblePath, HashValue>)>,
     ) -> (Vec<(Transaction, TransactionData)>, Vec<HashValue>) {
         let mut to_commit = vec![];
@@ -264,7 +264,7 @@ impl ApplyChunkOutput {
         for ((txn, txn_output), ((state_tree_hash, new_node_hashes), state_store_update)) in
             itertools::zip_eq(
                 to_keep,
-                itertools::zip_eq(roots_with_node_hashes, state_store_updates),
+                itertools::zip_eq(roots_with_node_hashes, state_updates),
             )
         {
             let (write_set, events, reconfig_events, gas_used, status) = txn_output.unpack();

@@ -5,7 +5,7 @@ use crate::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfo,
     proof::{SparseMerkleRangeProof, StateStoreValueProof},
-    state_store::state_store_key::StateStoreKey,
+    state_store::state_key::StateKey,
     transaction::Version,
 };
 use anyhow::ensure;
@@ -20,34 +20,35 @@ use serde::{Deserialize, Serialize};
     Clone, Debug, CryptoHasher, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd, Hash,
 )]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
-pub struct StateStoreValue {
+pub struct StateValue {
     pub bytes: Vec<u8>,
     hash: HashValue,
 }
 
-impl StateStoreValue {
+impl StateValue {
     fn new(bytes: Vec<u8>) -> Self {
-        let mut hasher = StateStoreValueHasher::default();
+        let mut hasher = StateValueHasher::default();
         hasher.update(&bytes);
         let hash = hasher.finish();
+
         Self { bytes, hash }
     }
 }
 
-impl From<AccountStateBlob> for StateStoreValue {
+impl From<AccountStateBlob> for StateValue {
     fn from(account_state_blob: AccountStateBlob) -> Self {
-        StateStoreValue::new(account_state_blob.blob)
+        StateValue::new(account_state_blob.blob)
     }
 }
 
-impl From<Vec<u8>> for StateStoreValue {
+impl From<Vec<u8>> for StateValue {
     fn from(bytes: Vec<u8>) -> Self {
-        StateStoreValue::new(bytes)
+        StateValue::new(bytes)
     }
 }
 
-impl CryptoHash for StateStoreValue {
-    type Hasher = StateStoreValueHasher;
+impl CryptoHash for StateValue {
+    type Hasher = StateValueHasher;
 
     fn hash(&self) -> HashValue {
         self.hash
@@ -62,35 +63,31 @@ impl CryptoHash for StateStoreValue {
 /// in the struct itself and not behind pointers/handles to file locations.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
-pub struct StateStoreValueChunkWithProof {
-    pub first_index: u64,     // The first account index in chunk
-    pub last_index: u64,      // The last account index in chunk
-    pub first_key: HashValue, // The first account key in chunk
-    pub last_key: HashValue,  // The last account key in chunk
-    pub raw_values: Vec<(HashValue, StateStoreValue)>, // The account blobs in the chunk
+pub struct StateValueChunkWithProof {
+    pub first_index: u64,                         // The first account index in chunk
+    pub last_index: u64,                          // The last account index in chunk
+    pub first_key: HashValue,                     // The first account key in chunk
+    pub last_key: HashValue,                      // The last account key in chunk
+    pub raw_values: Vec<(HashValue, StateValue)>, // The account blobs in the chunk
     pub proof: SparseMerkleRangeProof, // The proof to ensure the chunk is in the account states
-    pub root_hash: HashValue, // The root hash of the sparse merkle tree for this chunk
+    pub root_hash: HashValue,          // The root hash of the sparse merkle tree for this chunk
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
-pub struct StateStoreValueWithProof {
+pub struct StateValueWithProof {
     /// The transaction version at which this account state is seen.
     pub version: Version,
     /// Value represents the value in state store. If this field is not set, it
     /// means the key does not exist.
-    pub value: Option<StateStoreValue>,
+    pub value: Option<StateValue>,
     /// The proof the client can use to authenticate the value.
     pub proof: StateStoreValueProof,
 }
 
-impl StateStoreValueWithProof {
+impl StateValueWithProof {
     /// Constructor.
-    pub fn new(
-        version: Version,
-        value: Option<StateStoreValue>,
-        proof: StateStoreValueProof,
-    ) -> Self {
+    pub fn new(version: Version, value: Option<StateValue>, proof: StateStoreValueProof) -> Self {
         Self {
             version,
             value,
@@ -109,7 +106,7 @@ impl StateStoreValueWithProof {
         &self,
         ledger_info: &LedgerInfo,
         version: Version,
-        state_store_key: StateStoreKey,
+        state_store_key: StateKey,
     ) -> anyhow::Result<()> {
         ensure!(
             self.version == version,

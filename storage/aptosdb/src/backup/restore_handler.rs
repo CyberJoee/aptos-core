@@ -13,7 +13,7 @@ use aptos_types::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     proof::{definition::LeafCount, position::FrozenSubTreeIterator},
-    state_store::state_store_value::StateStoreValue,
+    state_store::state_value::StateValue,
     transaction::{Transaction, TransactionInfo, Version, PRE_GENESIS_VERSION},
 };
 use schemadb::DB;
@@ -54,7 +54,7 @@ impl RestoreHandler {
         &self,
         version: Version,
         expected_root_hash: HashValue,
-    ) -> Result<JellyfishMerkleRestore<StateStoreValue>> {
+    ) -> Result<JellyfishMerkleRestore<StateValue>> {
         JellyfishMerkleRestore::new_overwrite(
             Arc::clone(&self.state_store),
             version,

@@ -24,8 +24,8 @@ use aptos_types::{
     nibble::{nibble_path::NibblePath, ROOT_NIBBLE_HEIGHT},
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     state_store::{
-        state_store_key::StateStoreKey,
-        state_store_value::{StateStoreValue, StateStoreValueChunkWithProof},
+        state_key::StateKey,
+        state_value::{StateValue, StateValueChunkWithProof},
     },
     transaction::Version,
 };
@@ -34,9 +34,9 @@ use schemadb::{SchemaBatch, DB};
 use std::{collections::HashMap, sync::Arc};
 use storage_interface::StateSnapshotReceiver;
 
-type LeafNode = aptos_jellyfish_merkle::node_type::LeafNode<StateStoreValue>;
-type Node = aptos_jellyfish_merkle::node_type::Node<StateStoreValue>;
-type NodeBatch = aptos_jellyfish_merkle::NodeBatch<StateStoreValue>;
+type LeafNode = aptos_jellyfish_merkle::node_type::LeafNode<StateValue>;
+type Node = aptos_jellyfish_merkle::node_type::Node<StateValue>;
+type NodeBatch = aptos_jellyfish_merkle::NodeBatch<StateValue>;
 
 #[derive(Debug)]
 pub(crate) struct StateStore {
@@ -51,10 +51,10 @@ impl StateStore {
     /// Get the account state blob given account address and root hash of state Merkle tree
     pub fn get_value_with_proof_by_version(
         &self,
-        state_store_key: StateStoreKey,
+        state_key: StateKey,
         version: Version,
-    ) -> Result<(Option<StateStoreValue>, SparseMerkleProof<StateStoreValue>)> {
-        JellyfishMerkleTree::new(self).get_with_proof(state_store_key.hash(), version)
+    ) -> Result<(Option<StateValue>, SparseMerkleProof<StateValue>)> {
+        JellyfishMerkleTree::new(self).get_with_proof(state_key.hash(), version)
     }
 
     /// Gets the proof that proves a range of accounts.
@@ -70,7 +70,7 @@ impl StateStore {
     /// hashes for each write set.
     pub fn put_value_sets(
         &self,
-        value_state_sets: Vec<&HashMap<StateStoreKey, StateStoreValue>>,
+        value_state_sets: Vec<&HashMap<StateKey, StateValue>>,
         node_hashes: Option<Vec<&HashMap<NibblePath, HashValue>>>,
         first_version: Version,
         cs: &mut ChangeSet,
@@ -147,7 +147,7 @@ impl StateStore {
         Ok(ret)
     }
 
-    pub fn get_leaf_count(&self, version: Version) -> Result<usize> {
+    pub fn get_value_count(&self, version: Version) -> Result<usize> {
         JellyfishMerkleTree::new(self).get_leaf_count(version)
     }
 
@@ -156,11 +156,11 @@ impl StateStore {
         version: Version,
         first_index: usize,
         chunk_size: usize,
-    ) -> Result<StateStoreValueChunkWithProof> {
+    ) -> Result<StateValueChunkWithProof> {
         let result_iter =
             JellyfishMerkleIterator::new_by_index(Arc::clone(self), version, first_index)?
                 .take(chunk_size);
-        let account_blobs: Vec<(HashValue, StateStoreValue)> =
+        let account_blobs: Vec<(HashValue, StateValue)> =
             process_results(result_iter, |iter| iter.collect())?;
         ensure!(
             !account_blobs.is_empty(),
@@ -172,7 +172,7 @@ impl StateStore {
         let proof = self.get_value_range_proof(last_key, version)?;
         let root_hash = self.get_root_hash(version)?;
 
-        Ok(StateStoreValueChunkWithProof {
+        Ok(StateValueChunkWithProof {
             first_index: first_index as u64,
             last_index,
             first_key,
@@ -187,7 +187,7 @@ impl StateStore {
         self: &Arc<Self>,
         version: Version,
         expected_root_hash: HashValue,
-    ) -> Result<Box<dyn StateSnapshotReceiver<StateStoreValue>>> {
+    ) -> Result<Box<dyn StateSnapshotReceiver<StateValue>>> {
         Ok(Box::new(JellyfishMerkleRestore::new_overwrite(
             Arc::clone(self),
             version,
@@ -196,7 +196,7 @@ impl StateStore {
     }
 }
 
-impl TreeReader<StateStoreValue> for StateStore {
+impl TreeReader<StateValue> for StateStore {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
         self.db.get::<JellyfishMerkleNodeSchema>(node_key)
     }
@@ -263,7 +263,7 @@ impl TreeReader<StateStoreValue> for StateStore {
     }
 }
 
-impl TreeWriter<StateStoreValue> for StateStore {
+impl TreeWriter<StateValue> for StateStore {
     fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
         let mut batch = SchemaBatch::new();
         add_node_batch(&mut batch, node_batch)?;

@@ -7,7 +7,7 @@ use aptos_config::config::{RocksdbConfig, NO_OP_STORAGE_PRUNER_CONFIG};
 use aptos_types::{
     contract_event::ContractEvent,
     event::EventKey,
-    state_store::{state_store_key::StateStoreKey, state_store_value::StateStoreValue},
+    state_store::{state_key::StateKey, state_value::StateValue},
     transaction::{Transaction, Version},
 };
 use std::{convert::AsRef, path::Path};
@@ -67,14 +67,14 @@ impl Aptossum {
         self.db.transaction_store.get_transaction(version)
     }
 
-    pub fn get_state_store_value_by_version(
+    pub fn get_state_value_by_version(
         &self,
-        state_store_key: StateStoreKey,
+        state_key: StateKey,
         version: Version,
-    ) -> Result<Option<StateStoreValue>> {
+    ) -> Result<Option<StateValue>> {
         self.db
             .state_store
-            .get_value_with_proof_by_version(state_store_key, version)
+            .get_value_with_proof_by_version(state_key, version)
             .map(|blob_and_proof| blob_and_proof.0)
     }
 

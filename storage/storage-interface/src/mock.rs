@@ -10,7 +10,7 @@ use aptos_types::{
     account_config::AccountResource,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
-    state_store::{state_store_key::StateStoreKey, state_store_value::StateStoreValue},
+    state_store::{state_key::StateKey, state_value::StateValue},
 };
 use move_core_types::move_resource::MoveResource;
 use std::convert::TryFrom;
@@ -19,12 +19,12 @@ use std::convert::TryFrom;
 pub struct MockDbReaderWriter;
 
 impl DbReader for MockDbReaderWriter {
-    fn get_latest_value(&self, _resource_key: StateStoreKey) -> Result<Option<StateStoreValue>> {
+    fn get_latest_state_value(&self, _resource_key: StateKey) -> Result<Option<StateValue>> {
         Ok(Some(get_mock_account_state_blob()))
     }
 }
 
-fn get_mock_account_state_blob() -> StateStoreValue {
+fn get_mock_account_state_blob() -> StateValue {
     let account_resource = AccountResource::new(0, vec![], AccountAddress::random());
 
     let mut account_state = AccountState::default();
@@ -33,7 +33,7 @@ fn get_mock_account_state_blob() -> StateStoreValue {
         bcs::to_bytes(&account_resource).unwrap(),
     );
 
-    StateStoreValue::from(AccountStateBlob::try_from(&account_state).unwrap())
+    StateValue::from(AccountStateBlob::try_from(&account_state).unwrap())
 }
 
 impl DbWriter for MockDbReaderWriter {}

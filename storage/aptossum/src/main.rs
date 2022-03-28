@@ -5,7 +5,7 @@
 use anyhow::Result;
 
 use aptos_types::{
-    account_address::AccountAddress, event::EventKey, state_store::state_store_key::StateStoreKey,
+    account_address::AccountAddress, event::EventKey, state_store::state_key::StateKey,
 };
 use aptosdb::aptossum::Aptossum;
 use serde::Serialize;
@@ -67,7 +67,7 @@ struct AccountCmd {
     #[structopt(short, long, short)]
     address: AccountAddress,
     #[structopt(subcommand)]
-    resource_op: AccountOp,
+    account_op: AccountOp,
 }
 
 #[derive(StructOpt)]
@@ -148,11 +148,11 @@ fn run_cmd() -> Result<()> {
         },
         Command::Account(account_cmd) => {
             let address = account_cmd.address;
-            match account_cmd.resource_op {
+            match account_cmd.account_op {
                 AccountOp::Get { version } => {
                     print(
-                        aptossum.get_state_store_value_by_version(
-                            StateStoreKey::AccountAddressKey(address),
+                        aptossum.get_state_value_by_version(
+                            StateKey::AccountAddressKey(address),
                             version,
                         )?,
                         is_json,
