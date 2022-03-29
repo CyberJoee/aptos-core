@@ -32,7 +32,7 @@ full_node_networks:
             addresses:
             - "/dns4/pfn2.node.devnet.aptoslabs.com/tcp/6182/ln-noise-ik/f6b135a59591677afc98168791551a0a476222516fdc55869d2b649c614d965b/ln-handshake/0"
             role: "Upstream"
-        {}
+        
 
 api:
     # This specifies your REST API endpoint. Intentionally on public so that Docker can export it.
