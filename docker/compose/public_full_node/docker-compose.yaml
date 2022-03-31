@@ -48,7 +48,7 @@ services:
         source: ./waypoint.txt
         target: /aptos/waypoint.txt
         read_only: true
-    command: ["/aptos", "-f", "/aptos/node.yaml"]
+    command: ["/opt/aptos/bin/aptos-node", "-f", "/opt/aptos/etc/node.yaml"]
     ports:
       - "8080:8080"
       - "9101:9101"
