@@ -35,20 +35,20 @@ services:
     volumes:
       - type: volume
         source: db
-        target: /opt/aptos/data
+        target: /aptos/data
       - type: bind
         source: ./genesis.blob
-        target: /opt/aptos/etc/genesis.blob
+        target: /aptos/genesis.blob
         read_only: true
       - type: bind
         source: ./public_full_node.yaml
-        target: /opt/aptos/etc/node.yaml
+        target: /aptos/node.yaml
         read_only: true
       - type: bind
         source: ./waypoint.txt
-        target: /opt/aptos/etc/waypoint.txt
+        target: /aptos/waypoint.txt
         read_only: true
-    command: ["/opt/aptos/bin/aptos-node", "-f", "/opt/aptos/etc/node.yaml"]
+    command: ["/aptos/bin/aptos-node", "-f", "/aptos/node.yaml"]
     ports:
       - "8080:8080"
       - "9101:9101"
